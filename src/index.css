@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* App.css (for custom layout styling if needed) */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+h1 {
+  font-size: 2rem;
+}
