@@ -4,6 +4,7 @@ import PDFUploader from "./components/PDFUploader";
 import UploadProgress from "./components/UploadProgress";
 import ChatInterface from "./components/ChatInterface";
 import PDFViewer from "./components/PDFViewer";
+import { FiTrash2 } from "react-icons/fi";
 
 // IndexedDB helper functions
 const dbName = "pdfChatDB";
@@ -84,7 +85,10 @@ export default function App() {
           const reader = new FileReader();
           reader.onload = (e) => {
             setPdfData(e.target.result);
-            setIsLoading(false);
+            // Add artificial delay before finishing loading
+            setTimeout(() => {
+              setIsLoading(false);
+            }, 1500);
           };
           reader.onerror = () => {
             console.error("Error reading file");
@@ -110,24 +114,43 @@ export default function App() {
 
     const reader = new FileReader();
     reader.onloadstart = () => setUploadProgress(0);
-    reader.onprogress = (e) => {
-      if (e.lengthComputable) {
-        setUploadProgress((e.loaded / e.total) * 100);
-      }
-    };
-    reader.onloadend = async () => {
-      setPdfData(reader.result); // Set uploaded PDF data
 
-      // Store in IndexedDB
-      try {
-        await savePDF(file);
-      } catch (error) {
-        console.error("Error saving PDF:", error);
-        // Continue anyway, but log the error
-      }
+    // Simulate slower upload to allow progress bar to be visible
+    const simulateProgress = () => {
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 5;
+        if (progress >= 100) {
+          clearInterval(interval);
 
-      setIsUploading(false); // End upload
+          // After reaching 100%, wait for 3 seconds before completing
+          setTimeout(() => {
+            setPdfData(reader.result); // Set uploaded PDF data
+
+            // Store in IndexedDB
+            savePDF(file).catch((error) => {
+              console.error("Error saving PDF:", error);
+            });
+
+            // Add an extra delay before ending the upload state
+            setTimeout(() => {
+              setIsUploading(false); // End upload
+            }, 500);
+          }, 3000);
+        }
+        setUploadProgress(progress);
+      }, 150);
     };
+
+    reader.onload = () => {
+      simulateProgress();
+    };
+
+    reader.onerror = () => {
+      console.error("Error reading file");
+      setIsUploading(false);
+    };
+
     reader.readAsArrayBuffer(file); // Read file as ArrayBuffer
   };
 
@@ -147,8 +170,32 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex justify-center items-center">
-        <div className="text-xl">Loading...</div>
+      <div className="h-screen flex justify-center items-center bg-gray-50">
+        <div className="flex flex-col items-center">
+          <div className="w-10 h-10 mb-4">
+            <svg
+              className="animate-spin h-10 w-10 text-purple-600"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+          </div>
+          <div className="text-xl font-medium text-gray-700">Loading...</div>
+        </div>
       </div>
     );
   }
@@ -163,7 +210,7 @@ export default function App() {
       ) : (
         <>
           <div className="flex flex-row h-full">
-            <div className="flex-1 overflow-hidden p-4">
+            <div className="flex-1 overflow-hidden">
               <ChatInterface pdfData={pdfData} />
             </div>
             <div className="flex-1 overflow-hidden">
@@ -172,9 +219,10 @@ export default function App() {
           </div>
           <button
             onClick={handleClear}
-            className="absolute top-4 right-4 p-2 bg-red-500 text-white rounded"
+            className="absolute top-4 right-4 p-2 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-md transition-colors"
+            title="Start New Chat"
           >
-            Start New Chat
+            <FiTrash2 className="w-5 h-5" />
           </button>
         </>
       )}
