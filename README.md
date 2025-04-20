@@ -24,7 +24,7 @@ ChatWithPDF is a web application that allows you to upload PDF documents and hav
 1. Clone the repository:
 
 ````bash
-git clone https://github.com/yourusername/chatwithpdf.git
+git clone https://github.com/Mohitkuril/chatwithpdf.git
 cd chatwithpdf
 
 
