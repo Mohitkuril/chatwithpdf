@@ -1,11 +1,9 @@
-// src/components/UploadProgress.jsx
 import { useState, useEffect } from "react";
 
 export default function UploadProgress({ progress }) {
   const [displayProgress, setDisplayProgress] = useState(0);
   const [showLoader, setShowLoader] = useState(true);
 
-  // Smooth progress animation
   useEffect(() => {
     const interval = setInterval(() => {
       setDisplayProgress((current) => {
@@ -19,12 +17,11 @@ export default function UploadProgress({ progress }) {
     return () => clearInterval(interval);
   }, [progress]);
 
-  // Keep loader visible for minimum time
   useEffect(() => {
     if (progress >= 100) {
       const timer = setTimeout(() => {
         setShowLoader(false);
-      }, 3000); // Keep showing for 3 seconds after reaching 100%
+      }, 3000);
 
       return () => clearTimeout(timer);
     }

@@ -1,11 +1,9 @@
-// src/components/ChatInterface.jsx
 import { useState, useEffect, useRef } from "react";
 import { groqChat } from "../utils/groqChat";
 import * as pdfjsLib from "pdfjs-dist";
 import { FiSend, FiLoader } from "react-icons/fi";
 import "pdfjs-dist/build/pdf.worker.min";
 
-// Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 export default function ChatInterface({ pdfData }) {
@@ -19,7 +17,6 @@ export default function ChatInterface({ pdfData }) {
   const chatContainerRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Extract text from PDF when pdfData changes
   useEffect(() => {
     if (pdfData) {
       extractTextFromPDF(pdfData);
@@ -32,7 +29,6 @@ export default function ChatInterface({ pdfData }) {
     };
   }, [pdfData]);
 
-  // Scroll to bottom of chat when messages change
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop =
@@ -40,19 +36,16 @@ export default function ChatInterface({ pdfData }) {
     }
   }, [messages]);
 
-  // Focus input when chat is ready
   useEffect(() => {
     if (!extracting && inputRef.current) {
       inputRef.current.focus();
     }
   }, [extracting]);
 
-  // Extract text from PDF
   const extractTextFromPDF = async (pdfData) => {
     setExtracting(true);
     let extractionCompleted = false;
 
-    // Set minimum processing time to at least 4 seconds
     const minProcessingTimer = setTimeout(() => {
       if (extractionCompleted) {
         setExtracting(false);
@@ -65,7 +58,6 @@ export default function ChatInterface({ pdfData }) {
       const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
       let fullText = "";
 
-      // Extract text from each page
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
@@ -75,19 +67,17 @@ export default function ChatInterface({ pdfData }) {
 
       setPdfText(fullText);
 
-      // Initialize chat with PDF context
       const initialMessage = {
         role: "system",
-        content: `The following is content from a PDF document. Use this information to answer user questions:\n\n${fullText.substring(
+        content: `The following is content extracted from a PDF document. Use this information to answer user questions. Note that the text might be truncated if the document is large:\n\n${fullText.substring(
           0,
           15000
-        )}...`,
+        )}`,
       };
 
       setMessages([initialMessage]);
       setShowWelcomeCard(true);
 
-      // Add welcome message
       const welcomeMessage = {
         role: "assistant",
         content:
@@ -112,7 +102,6 @@ export default function ChatInterface({ pdfData }) {
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    // Add user message to chat
     const userMsg = { role: "user", content: input };
     setMessages((prev) => [
       ...prev.filter((msg) => msg.role !== "system"),
@@ -123,13 +112,12 @@ export default function ChatInterface({ pdfData }) {
     setShowWelcomeCard(false);
 
     try {
-      // Prepare messages array with system message first
       const systemMsg = {
         role: "system",
-        content: `The following is content from a PDF document. Use this information to answer user questions:\n\n${pdfText.substring(
+        content: `The following is content extracted from a PDF document. Use this information to answer user questions. Note that the text might be truncated if the document is large:\n\n${pdfText.substring(
           0,
           15000
-        )}...`,
+        )}`,
       };
 
       const chatMessages = [
@@ -143,16 +131,12 @@ export default function ChatInterface({ pdfData }) {
         ),
       ];
 
-      // Add the latest user message
       chatMessages.push(userMsg);
 
-      // Add artificial delay before getting response
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Get response from AI
       const reply = await groqChat(chatMessages);
 
-      // Add assistant response to chat
       const botMsg = { role: "assistant", content: reply };
       setMessages((prev) => [
         ...prev.filter((msg) => msg.role !== "system"),

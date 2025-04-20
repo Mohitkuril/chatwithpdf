@@ -1,6 +1,4 @@
-// src/utils/groqChat.js
 export const groqChat = async (messages, pdfData = null) => {
-  // Use the API key from the environment variables
   const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
   if (!API_KEY) {
@@ -10,7 +8,6 @@ export const groqChat = async (messages, pdfData = null) => {
 
   const endpoint = "https://api.groq.com/openai/v1/chat/completions";
 
-  // Create a properly formatted request payload
   const payload = {
     model: "meta-llama/llama-4-scout-17b-16e-instruct", // Changed model based on your curl example
     messages: messages.filter(

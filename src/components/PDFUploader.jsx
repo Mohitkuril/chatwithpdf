@@ -1,4 +1,3 @@
-// src/components/PDFUploader.jsx
 import { FiUploadCloud } from "react-icons/fi";
 
 export default function PDFUploader({ onUpload }) {
