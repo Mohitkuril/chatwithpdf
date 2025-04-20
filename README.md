@@ -2,8 +2,6 @@
 
 ChatWithPDF is a web application that allows you to upload PDF documents and have interactive conversations about their content using AI. The application processes your PDF, extracts the text, and uses the Groq AI API to provide contextual responses based on the document's content.
 
-![ChatWithPDF Screenshot](https://via.placeholder.com/800x450)
-
 ## Features
 
 - **PDF Upload**: Easily upload PDF documents through drag-and-drop or file selection
@@ -33,6 +31,16 @@ cd chatwithpdf
 ```bash
 yarn install
 ````
+
+Create a .env file in the root directory and add your Groq API key:
+
+ini
+Copy
+Edit
+REACT_APP_GROQ_API_KEY=your_groq_api_key_here
+🔑 You can get your free API key by signing up at https://console.groq.com/
+
+
 
 > ⚠️ Requires **Node.js v18+** and **Yarn v1.22+**
 
