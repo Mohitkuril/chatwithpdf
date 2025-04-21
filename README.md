@@ -108,19 +108,7 @@ Large PDFs may take longer to process
 The current implementation limits the context sent to the AI to prevent exceeding token limits
 For very large documents, only the first portion of the text is used as context
 
-Browser Compatibility
-ChatWithPDF works in modern browsers that support:
-
-IndexedDB
-PDF.js
-ES6+ JavaScript features
-Fetch API
-
-Development
-Adding New Features
-
 Acknowledgments
-
 PDF.js by Mozilla
 Groq AI for the language model API
 Tailwind CSS for the styling utilities
