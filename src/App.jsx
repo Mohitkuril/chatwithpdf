@@ -185,7 +185,7 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full md:h-screen flex flex-col">
       {!pdfData ? (
         <>
           <PDFUploader onUpload={handleUpload} />

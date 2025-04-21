@@ -15,11 +15,13 @@ export default function PDFViewer({ file }) {
   const [pdf, setPdf] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [numPages, setNumPages] = useState(0);
-  const [scale, setScale] = useState(1.5);
+  const [scale, setScale] = useState(1.0);
   const canvasRef = useRef(null);
   const [fileName, setFileName] = useState("");
   const [isRendering, setIsRendering] = useState(false);
+  const [autoScale, setAutoScale] = useState(true);
 
+  // Load PDF when file changes
   useEffect(() => {
     if (!file) return;
 
@@ -33,6 +35,8 @@ export default function PDFViewer({ file }) {
       (loadedPdf) => {
         setPdf(loadedPdf);
         setNumPages(loadedPdf.numPages);
+        // Force auto-scaling on PDF load
+        setAutoScale(true);
       },
       (error) => {
         console.error("Error loading PDF:", error);
@@ -44,74 +48,138 @@ export default function PDFViewer({ file }) {
     };
   }, [file]);
 
-  useEffect(() => {
-    if (!pdf) return;
+  // Calculate and apply auto-scale when needed
+  const calculateAutoScale = async () => {
+    if (!pdf || !containerRef.current) return;
 
-    const renderPage = async () => {
-      setIsRendering(true);
+    try {
       const page = await pdf.getPage(currentPage);
-      const viewport = page.getViewport({ scale });
+      const viewport = page.getViewport({ scale: 1.0 });
 
-      const canvas = canvasRef.current;
-      const context = canvas.getContext("2d");
+      // Get available width (subtract padding)
+      const isMobile = window.innerWidth < 768;
+      const containerWidth = containerRef.current.clientWidth;
+      const availableWidth = containerWidth - (isMobile ? 32 : 48);
 
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
+      // Calculate scale needed to fit the width
+      let newScale = availableWidth / viewport.width;
 
-      const pixelRatio = window.devicePixelRatio || 1;
-      const scaledViewport = page.getViewport({ scale: scale * pixelRatio });
+      // Cap scale for very small screens
+      if (isMobile && newScale < 0.5) newScale = 0.5;
+      if (newScale > 2) newScale = 2;
 
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
+      return newScale;
+    } catch (error) {
+      console.error("Error calculating auto-scale:", error);
+      return 1.0;
+    }
+  };
 
-      canvas.width = Math.floor(viewport.width * pixelRatio);
-      canvas.height = Math.floor(viewport.height * pixelRatio);
+  // Render page when page or scale changes
+  useEffect(() => {
+    const renderPage = async () => {
+      if (!pdf || !canvasRef.current) return;
 
-      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      setIsRendering(true);
+      try {
+        // Calculate new scale if auto-scaling is enabled
+        let effectiveScale = scale;
+        if (autoScale) {
+          const calculatedScale = await calculateAutoScale();
+          effectiveScale = calculatedScale;
+          setScale(calculatedScale);
+          setAutoScale(false);
+        }
 
-      const renderContext = {
-        canvasContext: context,
-        viewport: scaledViewport,
-        enableWebGL: true,
-        renderInteractiveForms: true,
-      };
+        const page = await pdf.getPage(currentPage);
+        const viewport = page.getViewport({ scale: effectiveScale });
 
-      await page.render(renderContext).promise;
-      setIsRendering(false);
+        const canvas = canvasRef.current;
+        const context = canvas.getContext("2d");
+
+        // Set canvas display dimensions
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
+
+        // Adjust for high-DPI displays
+        const pixelRatio = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(viewport.width * pixelRatio);
+        canvas.height = Math.floor(viewport.height * pixelRatio);
+
+        // Scale context to match pixel ratio
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+        const renderContext = {
+          canvasContext: context,
+          viewport,
+          enableWebGL: true,
+          renderInteractiveForms: true,
+        };
+
+        await page.render(renderContext).promise;
+      } catch (error) {
+        console.error("Error rendering PDF page:", error);
+      } finally {
+        setIsRendering(false);
+      }
     };
 
     renderPage();
-  }, [pdf, currentPage, scale]);
+  }, [pdf, currentPage, scale, autoScale]);
+
+  // Auto-fit on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (pdf) setAutoScale(true);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [pdf]);
 
   const changePage = (delta) => {
     const newPage = currentPage + delta;
     if (newPage >= 1 && newPage <= numPages) {
       setCurrentPage(newPage);
+      // Force auto-scaling on page change
+      setAutoScale(true);
     }
   };
 
   const changeZoom = (delta) => {
     setScale((prevScale) => {
       const newScale = prevScale + delta;
-      return newScale >= 0.5 && newScale <= 3 ? newScale : prevScale;
+      const limitedScale =
+        newScale >= 0.5 && newScale <= 3 ? newScale : prevScale;
+      // Disable auto-scaling when manually zooming
+      setAutoScale(false);
+      return limitedScale;
     });
+  };
+
+  const fitToWidth = async () => {
+    if (!pdf) return;
+    setAutoScale(true);
   };
 
   return (
     <div className="flex flex-col h-full border-l border-gray-200">
       {fileName && (
-        <div className="px-4 py-3 bg-white border-b border-gray-200">
+        <div className="px-4 py-2 bg-white border-b border-gray-200">
           <h3 className="font-medium text-gray-700 truncate" title={fileName}>
             {fileName}
           </h3>
         </div>
       )}
-      <div className="flex justify-between items-center p-2 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center space-x-2">
+
+      {/* Controls - Responsive layout */}
+      <div className="flex flex-wrap justify-between items-center p-2 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center space-x-1 mr-2">
           <button
             onClick={() => changePage(-1)}
-            disabled={currentPage <= 1}
-            className="p-1 rounded-full hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            disabled={currentPage <= 1 || isRendering}
+            className="p-1 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="Previous page"
           >
             <FiChevronLeft className="w-5 h-5" />
           </button>
@@ -120,34 +188,49 @@ export default function PDFViewer({ file }) {
           </span>
           <button
             onClick={() => changePage(1)}
-            disabled={currentPage >= numPages}
-            className="p-1 rounded-full hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            disabled={currentPage >= numPages || isRendering}
+            className="p-1 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="Next page"
           >
             <FiChevronRight className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex items-center space-x-2">
+
+        <div className="flex items-center space-x-1 mt-1 sm:mt-0">
           <button
-            onClick={() => changeZoom(-0.2)}
-            className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+            onClick={() => changeZoom(-0.1)}
+            className="p-1 rounded hover:bg-gray-200 transition-colors"
+            aria-label="Zoom out"
+            disabled={isRendering}
           >
             <FiZoomOut className="w-5 h-5" />
           </button>
-          <span className="text-sm font-medium">
+          <span className="text-sm font-medium min-w-16 text-center">
             {Math.round(scale * 100)}%
           </span>
           <button
-            onClick={() => changeZoom(0.2)}
-            className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+            onClick={() => changeZoom(0.1)}
+            className="p-1 rounded hover:bg-gray-200 transition-colors"
+            aria-label="Zoom in"
+            disabled={isRendering}
           >
             <FiZoomIn className="w-5 h-5" />
+          </button>
+          <button
+            onClick={fitToWidth}
+            className="ml-1 px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors"
+            aria-label="Fit to width"
+            disabled={isRendering}
+          >
+            Fit
           </button>
         </div>
       </div>
 
+      {/* PDF Container */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto bg-gray-100 flex justify-center"
+        className="flex-1 overflow-auto bg-gray-100 relative"
       >
         {isRendering && (
           <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60 z-10">
@@ -175,7 +258,11 @@ export default function PDFViewer({ file }) {
             </div>
           </div>
         )}
-        <canvas ref={canvasRef} className="my-4 shadow-md bg-white" />
+        <div className="flex justify-center">
+          <div className="p-4 inline-block">
+            <canvas ref={canvasRef} className="shadow-md bg-white" />
+          </div>
+        </div>
       </div>
     </div>
   );
