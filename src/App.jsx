@@ -1,4 +1,3 @@
-// src/App.jsx
 import { useState, useEffect } from "react";
 import PDFUploader from "./components/PDFUploader";
 import UploadProgress from "./components/UploadProgress";
@@ -6,11 +5,9 @@ import ChatInterface from "./components/ChatInterface";
 import PDFViewer from "./components/PDFViewer";
 import { FiTrash2 } from "react-icons/fi";
 
-// IndexedDB helper functions
 const dbName = "pdfChatDB";
 const storeName = "pdfFiles";
 
-// Open database
 const openDB = () => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(dbName, 1);
@@ -27,7 +24,6 @@ const openDB = () => {
   });
 };
 
-// Save file to IndexedDB
 const savePDF = async (file) => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -40,7 +36,6 @@ const savePDF = async (file) => {
   });
 };
 
-// Get file from IndexedDB
 const getPDF = async () => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -53,7 +48,6 @@ const getPDF = async () => {
   });
 };
 
-// Delete file from IndexedDB
 const deletePDF = async () => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -67,13 +61,12 @@ const deletePDF = async () => {
 };
 
 export default function App() {
-  const [pdfFile, setPdfFile] = useState(null); // Store PDF file
-  const [pdfData, setPdfData] = useState(null); // Store PDF data
-  const [uploadProgress, setUploadProgress] = useState(0); // Track upload progress
-  const [isUploading, setIsUploading] = useState(false); // Track upload state
-  const [isLoading, setIsLoading] = useState(true); // Track initial loading state
+  const [pdfFile, setPdfFile] = useState(null);
+  const [pdfData, setPdfData] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Check for stored PDF on component mount
   useEffect(() => {
     const loadStoredPDF = async () => {
       try {
@@ -81,11 +74,9 @@ export default function App() {
         if (storedFile) {
           setPdfFile(storedFile);
 
-          // Read the file as ArrayBuffer
           const reader = new FileReader();
           reader.onload = (e) => {
             setPdfData(e.target.result);
-            // Add artificial delay before finishing loading
             setTimeout(() => {
               setIsLoading(false);
             }, 1500);
@@ -107,15 +98,13 @@ export default function App() {
     loadStoredPDF();
   }, []);
 
-  // Handle file upload
   const handleUpload = (file) => {
-    setIsUploading(true); // Start upload
-    setPdfFile(file); // Store the file object
+    setIsUploading(true);
+    setPdfFile(file);
 
     const reader = new FileReader();
     reader.onloadstart = () => setUploadProgress(0);
 
-    // Simulate slower upload to allow progress bar to be visible
     const simulateProgress = () => {
       let progress = 0;
       const interval = setInterval(() => {
@@ -123,18 +112,15 @@ export default function App() {
         if (progress >= 100) {
           clearInterval(interval);
 
-          // After reaching 100%, wait for 3 seconds before completing
           setTimeout(() => {
-            setPdfData(reader.result); // Set uploaded PDF data
+            setPdfData(reader.result);
 
-            // Store in IndexedDB
             savePDF(file).catch((error) => {
               console.error("Error saving PDF:", error);
             });
 
-            // Add an extra delay before ending the upload state
             setTimeout(() => {
-              setIsUploading(false); // End upload
+              setIsUploading(false);
             }, 500);
           }, 3000);
         }
@@ -151,21 +137,19 @@ export default function App() {
       setIsUploading(false);
     };
 
-    reader.readAsArrayBuffer(file); // Read file as ArrayBuffer
+    reader.readAsArrayBuffer(file);
   };
 
-  // Handle clearing the PDF data and resetting the app
   const handleClear = async () => {
     try {
       await deletePDF();
     } catch (error) {
       console.error("Error deleting PDF:", error);
-      // Continue anyway, but log the error
     }
 
     setPdfFile(null);
     setPdfData(null);
-    setUploadProgress(0); // Reset progress bar
+    setUploadProgress(0);
   };
 
   if (isLoading) {
@@ -209,7 +193,7 @@ export default function App() {
         </>
       ) : (
         <>
-          <div className="flex flex-row h-full">
+          <div className="flex flex-col-reverse md:flex-row h-full">
             <div className="flex-1 overflow-hidden">
               <ChatInterface pdfData={pdfData} />
             </div>
